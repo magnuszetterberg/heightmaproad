@@ -15,7 +15,13 @@ persistence = 0.5
 lacunarity = 2.0
 
 # Generate heightmap using Perlin noise
-def generate_heightmap(width, height, scale, octaves, persistence, lacunarity):
+def generate_heightmap(width, height, scale, octaves, persistence, lacunarity, seed=None):
+    if seed is not None:
+        np.random.seed(seed)  # Seed the random number generator for reproducibility
+        base = seed
+    else:
+        base = np.random.randint(0, 100)  # Use a random seed if none provided
+
     heightmap = np.zeros((height, width))
 
     for i in range(height):
@@ -86,8 +92,9 @@ def add_road(heightmap, path, road_raise=0.01):
                     heightmap[ny, nx] = max(heightmap[ny, nx] + road_raise, heightmap[ny, nx])
     return heightmap
 
-# Main logic to generate the heightmap and road
-heightmap = generate_heightmap(width, height, scale, octaves, persistence, lacunarity)
+# Example usage with a specific seed
+my_seed = None  # Replace with your preferred seed value
+heightmap = generate_heightmap(width, height, scale, octaves, persistence, lacunarity, seed=my_seed)
 # Choose start and goal points more organically
 start = (np.random.randint(0, height // 4), np.random.randint(0, width // 4))
 goal = (np.random.randint(3 * height // 4, height), np.random.randint(3 * width // 4, width))
@@ -101,7 +108,7 @@ if path:
     # Save the heightmap with a road to a PNG file
     plt.imshow(heightmap_with_road, cmap='gray')
     plt.axis('off')
-    plt.savefig('heightmap_with_road.png', bbox_inches='tight', pad_inches=0)
+    plt.savefig(f'heightmap_with_road_{my_seed}.png', bbox_inches='tight', pad_inches=0)
     plt.close()
 else:
     print("No path found")
