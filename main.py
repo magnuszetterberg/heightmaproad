@@ -74,18 +74,16 @@ def a_star_search(heightmap, start, goal, height_penalty=10.0):
     return []  # No path was found
 
 # Draw the road on the heightmap
-def add_road(heightmap, path, blend_factor=0.5):
+def add_road(heightmap, path, road_raise=0.01):
     road_width = 1  # Width of the road in pixels
-    road_elevation = 0.1  # Target elevation for the road
 
     for (y, x) in path:
         for dy in range(-road_width, road_width + 1):
             for dx in range(-road_width, road_width + 1):
                 ny, nx = y + dy, x + dx
-                if 0 <= ny < height and 0 <= nx < width:
-                    # Blend road elevation with heightmap elevation
-                    heightmap[ny, nx] = (blend_factor * road_elevation +
-                                         (1 - blend_factor) * heightmap[ny, nx])
+                if 0 <= ny < heightmap.shape[0] and 0 <= nx < heightmap.shape[1]:
+                    # Set the road elevation to be slightly above the current terrain elevation
+                    heightmap[ny, nx] = max(heightmap[ny, nx] + road_raise, heightmap[ny, nx])
     return heightmap
 
 # Main logic to generate the heightmap and road
@@ -97,7 +95,10 @@ goal = (np.random.randint(3 * height // 4, height), np.random.randint(3 * width 
 path = a_star_search(heightmap, start, goal, height_penalty=500.0)
 
 if path:
-    heightmap_with_road = add_road(heightmap, path, blend_factor=0.5)  # Use your chosen blend factor here
+    # Add a road that sits just on top of the heightmap
+    heightmap_with_road = add_road(heightmap, path, road_raise=0.01)  # Adjust road_raise if needed
+
+    # Save the heightmap with a road to a PNG file
     plt.imshow(heightmap_with_road, cmap='gray')
     plt.axis('off')
     plt.savefig('heightmap_with_road.png', bbox_inches='tight', pad_inches=0)
