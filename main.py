@@ -4,16 +4,16 @@ from noise import pnoise2
 from heapq import heappush, heappop
 
 # Configuration parameters
-width = 300
-height = 300
+width = 512
+height = 512
 scale = 100.0
 octaves = 6
 persistence = 0.5
 lacunarity = 2.0
 custom_seed = 4254
-height_penalty = 500.0
-path_deviation_weight = 30.0
-min_loop_length = 400  # The minimum number of points in the loop
+height_penalty = 10.0
+path_deviation_weight = 1000000.0
+min_loop_length = 700  # The minimum number of points in the loop
 max_attempts = 20  # Maximum attempts to find a loop with the minimum length
 
 
@@ -81,7 +81,7 @@ def a_star_search(heightmap, start, goal, avoid=None, height_penalty=10.0, path_
     return []
 
 
-def add_road(heightmap, path, road_width=2, road_offset=0.05):
+def add_road(heightmap, path, road_width=5, road_offset=1.):
     # Calculate the elevation for the road based on the terrain height at each point plus a fixed offset
     road_elevations = [heightmap[point] + road_offset for point in path]
 
