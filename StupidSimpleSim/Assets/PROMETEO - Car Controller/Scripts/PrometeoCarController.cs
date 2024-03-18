@@ -32,11 +32,12 @@ public class PrometeoCarController : MonoBehaviour
       [Space(20)]
       //[Header("CAR SETUP")]
       [Space(10)]
+      public int torqueMultiplier = 2; // New variable to control the torque separately
       [Range(20, 190)]
       public int maxSpeed = 90; //The maximum speed that the car can reach in km/h.
       [Range(10, 120)]
       public int maxReverseSpeed = 45; //The maximum speed that the car can reach while going on reverse in km/h.
-      [Range(1, 10)]
+      [Range(1, 45)]
       public int accelerationMultiplier = 2; // How fast the car can accelerate. 1 is a slow acceleration and 10 is the fastest.
       [Space(10)]
       [Range(10, 45)]
@@ -279,7 +280,15 @@ public class PrometeoCarController : MonoBehaviour
       //CAR DATA
 
       // We determine the speed of the car.
-      carSpeed = (2 * Mathf.PI * frontLeftCollider.radius * frontLeftCollider.rpm * 60) / 1000;
+      // Get the velocity vector of the car's Rigidbody
+      Vector3 velocity = carRigidbody.velocity;
+      // Calculate the speed of the car by considering only the forward movement.
+      // This is done by projecting the velocity vector onto the car's forward vector.
+      float speedInMetersPerSecond = Vector3.Dot(velocity, transform.forward);
+      // Convert the speed from meters per second to kilometers per hour by multiplying with 3.6 (1 m/s = 3.6 km/h).
+      carSpeed = speedInMetersPerSecond * 3.6f;
+      //carSpeed = (2 * Mathf.PI * frontLeftCollider.radius * frontLeftCollider.rpm * 60) / 1000;
+
       // Save the local velocity of the car in the x axis. Used to know if the car is drifting.
       localVelocityX = transform.InverseTransformDirection(carRigidbody.velocity).x;
       // Save the local velocity of the car in the z axis. Used to know if the car is going forward or backwards.
@@ -509,7 +518,7 @@ public class PrometeoCarController : MonoBehaviour
     public void GoForward(){
       //If the forces aplied to the rigidbody in the 'x' asis are greater than
       //3f, it means that the car is losing traction, then the car will start emitting particle systems.
-      if(Mathf.Abs(localVelocityX) > 2.5f){
+      if(Mathf.Abs(localVelocityX) > 1.5f || (localVelocityZ > 1.5f && carSpeed < maxSpeed*0.5)){
         isDrifting = true;
         DriftCarPS();
       }else{
@@ -517,10 +526,11 @@ public class PrometeoCarController : MonoBehaviour
         DriftCarPS();
       }
       // The following part sets the throttle power to 1 smoothly.
-      throttleAxis = throttleAxis + (Time.deltaTime * 3f);
-      if(throttleAxis > 1f){
-        throttleAxis = 1f;
-      }
+      throttleAxis = 1f;
+      // throttleAxis = throttleAxis + (Time.deltaTime * 3f);
+      // if(throttleAxis > 1f){
+      //   throttleAxis = 1f;
+      // }
       //If the car is going backwards, then apply brakes in order to avoid strange
       //behaviours. If the local velocity in the 'z' axis is less than -1f, then it
       //is safe to apply positive torque to go forward.
@@ -530,13 +540,13 @@ public class PrometeoCarController : MonoBehaviour
         if(Mathf.RoundToInt(carSpeed) < maxSpeed){
           //Apply positive torque in all wheels to go forward if maxSpeed has not been reached.
           frontLeftCollider.brakeTorque = 0;
-          frontLeftCollider.motorTorque = (accelerationMultiplier * 50f) * throttleAxis;
+          frontLeftCollider.motorTorque = (accelerationMultiplier * 50f * torqueMultiplier) * throttleAxis;
           frontRightCollider.brakeTorque = 0;
-          frontRightCollider.motorTorque = (accelerationMultiplier * 50f) * throttleAxis;
+          frontRightCollider.motorTorque = (accelerationMultiplier * 50f * torqueMultiplier) * throttleAxis;
           rearLeftCollider.brakeTorque = 0;
-          rearLeftCollider.motorTorque = (accelerationMultiplier * 50f) * throttleAxis;
+          rearLeftCollider.motorTorque = (accelerationMultiplier * 50f * torqueMultiplier) * throttleAxis;
           rearRightCollider.brakeTorque = 0;
-          rearRightCollider.motorTorque = (accelerationMultiplier * 50f) * throttleAxis;
+          rearRightCollider.motorTorque = (accelerationMultiplier * 50f * torqueMultiplier) * throttleAxis;
         }else {
           // If the maxSpeed has been reached, then stop applying torque to the wheels.
           // IMPORTANT: The maxSpeed variable should be considered as an approximation; the speed of the car
@@ -562,10 +572,11 @@ public class PrometeoCarController : MonoBehaviour
         DriftCarPS();
       }
       // The following part sets the throttle power to -1 smoothly.
-      throttleAxis = throttleAxis - (Time.deltaTime * 3f);
-      if(throttleAxis < -1f){
-        throttleAxis = -1f;
-      }
+      throttleAxis = -1f;
+      // throttleAxis = throttleAxis - (Time.deltaTime * 3f);
+      // if(throttleAxis < -1f){
+      //   throttleAxis = -1f;
+      // }
       //If the car is still going forward, then apply brakes in order to avoid strange
       //behaviours. If the local velocity in the 'z' axis is greater than 1f, then it
       //is safe to apply negative torque to go reverse.
