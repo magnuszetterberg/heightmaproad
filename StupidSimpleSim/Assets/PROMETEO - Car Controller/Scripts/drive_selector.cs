@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using UnityEngine.UI; // Required for the UI elements
 
 [RequireComponent(typeof(PrometeoCarController))]
 public class DriveTypeController : MonoBehaviour
@@ -11,12 +12,23 @@ public class DriveTypeController : MonoBehaviour
         AllWheelDrive
     }
 
+   // Add a public dropdown reference
+    public Dropdown driveTypeDropdown;
+
     private PrometeoCarController carController;
     public DriveType driveType;
 
     void Start()
     {
         carController = GetComponent<PrometeoCarController>();
+
+        // Set the initial drive type based on Dropdown value
+        SetDriveType((DriveType)driveTypeDropdown.value);
+
+        // Add listener for Dropdown value changes
+        driveTypeDropdown.onValueChanged.AddListener(delegate {
+            SetDriveType((DriveType)driveTypeDropdown.value);
+        });
     }
 
     // Call this method to apply torque to the correct wheels based on the selected drive type.
@@ -72,5 +84,6 @@ public class DriveTypeController : MonoBehaviour
     public void SetDriveType(DriveType newDriveType)
     {
         driveType = newDriveType;
+        // You can add any additional code here that needs to run when the drive type changes
     }
 }
