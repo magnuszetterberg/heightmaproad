@@ -25,12 +25,12 @@ private void PublishTransformData()
         // Create a new instance of TransformData with formatted strings
         TransformData data = new TransformData
         {
-            x = position.x.ToString("F2"),
-            y = position.y.ToString("F2"),
-            z = position.z.ToString("F2"),
-            pitch = rotation.x.ToString("F2"),
-            yaw = rotation.y.ToString("F2"),
-            roll = rotation.z.ToString("F2")
+            x = position.x.ToString("F1"),
+            y = position.y.ToString("F1"),
+            z = position.z.ToString("F1"),
+            pitch = rotation.x.ToString("F1"),
+            yaw = rotation.y.ToString("F1"),
+            roll = rotation.z.ToString("F1")
         };
 
         string jsonData = JsonUtility.ToJson(data);
