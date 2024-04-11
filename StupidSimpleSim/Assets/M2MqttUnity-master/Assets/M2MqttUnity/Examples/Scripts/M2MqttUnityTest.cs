@@ -248,7 +248,7 @@ namespace M2MqttUnity.Examples
                 StoreMessage(message);
                 Debug.Log("Topic: " + topic);
                 // Optionally, log the message for debugging purposes
-                Debug.Log("Received: " + message);
+                //Debug.Log("Received: " + message);
             }
         }
 
@@ -256,7 +256,7 @@ namespace M2MqttUnity.Examples
         {
             string msg = System.Text.Encoding.UTF8.GetString(message);
             OnMessage?.Invoke(topic, msg);
-            Debug.Log("Received: " + msg);
+            //Debug.Log("Received: " + msg);
             StoreMessage(msg);
         }
 

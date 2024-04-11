@@ -1,11 +1,39 @@
 
 using UnityEngine;
 using M2MqttUnity.Examples;
+using System;
 
 public class ObjectDataPublisher : MonoBehaviour
 {
     public M2MqttUnityTest mqttClientScript;
-    public string topic = "car/transform";
+    private string baseTopic = "cars/";
+    private string fullTopic;
+    private PlayerID playerID;
+
+    void Start()
+    {
+        playerID = GetComponent<PlayerID>();
+        if (playerID == null)
+        {
+            Debug.LogError("PlayerID component not found on the GameObject.");
+            return;
+        }
+
+        // Use the player's unique ID to build the full MQTT topic
+        fullTopic = baseTopic + playerID.UniqueID.ToString("D4") + "/transform"; // D4 ensures it's always 4 digits
+
+        if (mqttClientScript == null)
+        {
+            Debug.LogError("MQTT client script reference not set in the inspector.");
+            return;
+        }
+
+        if (!mqttClientScript.IsConnected)
+        {
+            Debug.LogWarning("MQTT client is not connected or not assigned.");
+            return;
+        }
+    }
 
     // Update is called once per frame
     void Update()
@@ -14,43 +42,53 @@ public class ObjectDataPublisher : MonoBehaviour
     }
 
 
-
 private void PublishTransformData()
 {
-    if (mqttClientScript != null && mqttClientScript.IsConnected)
+    if (mqttClientScript == null)
+    {
+        Debug.LogError("MQTT client script reference not set.");
+        return;
+    }
+
+    if (!mqttClientScript.IsConnected)
+    {
+        Debug.LogWarning("MQTT client is not connected or not assigned.");
+        return;
+    }
+
+    try
     {
         Vector3 position = transform.position;
         Vector3 rotation = transform.eulerAngles; // Unity uses Euler angles in degrees
 
-        // Create a new instance of TransformData with formatted strings
         TransformData data = new TransformData
         {
-            x = position.x.ToString("F1"),
-            y = position.y.ToString("F1"),
-            z = position.z.ToString("F1"),
-            pitch = rotation.x.ToString("F1"),
-            yaw = rotation.y.ToString("F1"),
-            roll = rotation.z.ToString("F1")
+            x = position.x.ToString("F2"),
+            y = position.y.ToString("F2"),
+            z = position.z.ToString("F2"),
+            pitch = rotation.x.ToString("F2"),
+            yaw = rotation.y.ToString("F2"),
+            roll = rotation.z.ToString("F2")
         };
 
         string jsonData = JsonUtility.ToJson(data);
-
-        mqttClientScript.PublishMessage(topic, jsonData);
+        mqttClientScript.PublishMessage(fullTopic, jsonData);
     }
-    else
+    catch (Exception ex)
     {
-        Debug.LogWarning("MQTT client is not connected or not assigned.");
+        Debug.LogError("Error publishing MQTT message: " + ex.Message);
     }
 }
 
-[System.Serializable]
-private class TransformData
-{
-    public string x;
-    public string y;
-    public string z;
-    public string pitch;
-    public string yaw;
-    public string roll;
-}
+
+    [System.Serializable]
+    private class TransformData
+    {
+        public string x;
+        public string y;
+        public string z;
+        public string pitch;
+        public string yaw;
+        public string roll;
+    }
 }

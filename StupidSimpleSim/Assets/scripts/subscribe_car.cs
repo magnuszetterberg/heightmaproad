@@ -1,15 +1,17 @@
 
 using UnityEngine;
 using M2MqttUnity.Examples;
+using System.Collections.Generic;
 
 public class MQTTTest : MonoBehaviour
 {
-    public string topic = "rosi_integration/system/position";
-    public M2MqttUnityTest client;
+    public M2MqttUnityTest client; // Reference to your existing MQTT client script
+    public GameObject prefab; // Assign the prefab you want to clone in the inspector
+    public PlayerID playerID; // Reference to the PlayerID component
     public float smoothFactor = 0.1f; // Adjust this value for smoother or faster transitions
 
-    private PositionData targetPositionData;
-    private bool isTransitioning = false;
+    private Dictionary<int, PositionData> pathData = new Dictionary<int, PositionData>();
+    private Dictionary<int, GameObject> pathObjects = new Dictionary<int, GameObject>();
 
     [System.Serializable]
     public class PositionData
@@ -24,45 +26,88 @@ public class MQTTTest : MonoBehaviour
 
     void Start()
     {
-        client.OnMessage += OnMessage;
-        targetPositionData = new PositionData();
+        if (client == null)
+        {
+            Debug.LogError("MQTT client script reference not set in the inspector.");
+            return;
+        }
+
+        if (prefab == null)
+        {
+            Debug.LogError("Prefab for cloning is not assigned in the inspector.");
+            return;
+        }
+
+        if (playerID == null)
+        {
+            Debug.LogError("PlayerID component reference not set in the inspector.");
+            return;
+        }
+
+        client.OnMessage += OnMessage; // Register to the OnMessage event of M2MqttUnityTest
     }
 
     void Update()
     {
-        if (isTransitioning)
+        foreach (var kvp in pathData)
         {
-            // Smoothly interpolate the position
-            Vector3 targetPosition = new Vector3(targetPositionData.x, targetPositionData.y, targetPositionData.z);
-            transform.position = Vector3.Lerp(transform.position, targetPosition, smoothFactor);
+            int id = kvp.Key;
+            PositionData data = kvp.Value;
 
-            // Smoothly interpolate the rotation
-            Quaternion targetRotation = Quaternion.Euler(targetPositionData.pitch, targetPositionData.yaw, targetPositionData.roll);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, smoothFactor);
-
-            // Optionally, you can stop interpolating once you're close enough to the target
-            if (Vector3.Distance(transform.position, targetPosition) < 0.01f && 
-                Quaternion.Angle(transform.rotation, targetRotation) < 1f)
+            if (!pathObjects.TryGetValue(id, out GameObject obj))
             {
-                isTransitioning = false; // Stop interpolating when the target is reached within a threshold
+                // If there is no object for this ID, instantiate one and add it to the dictionary
+                obj = Instantiate(prefab);
+                pathObjects[id] = obj;
             }
+
+            // Smoothly interpolate the position and rotation for each object
+            Vector3 targetPosition = new Vector3(data.x, data.y, data.z);
+            Quaternion targetRotation = Quaternion.Euler(data.pitch, data.yaw, data.roll);
+
+            obj.transform.position = Vector3.Lerp(obj.transform.position, targetPosition, smoothFactor);
+            obj.transform.rotation = Quaternion.Slerp(obj.transform.rotation, targetRotation, smoothFactor);
         }
     }
+
+
 
     void OnMessage(string topic, string msg)
     {
-        if (topic == this.topic)
-        {
-            Debug.Log("Received message from " + topic + " : " + msg);
+        //Debug.Log("Received message on topic: " + topic); // Log every message received for debugging
 
-            // Parse the incoming data and store it as the new target for interpolation
-            targetPositionData = JsonUtility.FromJson<PositionData>(msg);
-            isTransitioning = true; // Start transitioning towards the new target position and rotation
+        string[] topicParts = topic.Split('/');
+        if (topicParts.Length >= 3 && int.TryParse(topicParts[1], out int playerId))
+        {
+            if (playerId == playerID.UniqueID)
+            {
+               return;
+               // Debug.Log("Received my own message, ignoring: " + msg);
+            }
+            else
+            {
+                //Debug.Log("Received other player's message: " + msg);
+
+            PositionData receivedData = JsonUtility.FromJson<PositionData>(msg);
+            
+            // Update or create a new entry for this player ID
+            pathData[playerId] = receivedData;
+
+            // Ensure there's an instantiated object for this ID
+            if (!pathObjects.ContainsKey(playerId))
+            {
+                GameObject newObj = Instantiate(prefab);
+                pathObjects[playerId] = newObj;
+                newObj.name = "Player_" + playerId; // Optional: Set the name to easily identify in the hierarchy
+            }
         }
     }
+}
 
-    void OnApplicationQuit()
+
+
+     void OnApplicationQuit()
     {
-        client.OnMessage -= OnMessage; // Unsubscribe from the event when quitting
+        client.OnMessage -= OnMessage; // Unregister from the OnMessage event when quitting
     }
 }
