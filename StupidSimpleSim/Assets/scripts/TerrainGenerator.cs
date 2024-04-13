@@ -1,4 +1,4 @@
-
+// TerrainGenerator.cs
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -15,7 +15,6 @@ public class TerrainGenerator : MonoBehaviour
 
     private void Awake()
     {
-        // Ensure the terrain component is assigned
         // terrain = GetComponent<Terrain>();
         // if (terrain == null)
         // {
@@ -25,22 +24,17 @@ public class TerrainGenerator : MonoBehaviour
 
     public void SetSeedAndGenerate(int seed)
     {
-        if (terrain != null)
-        {
-            // Generate the terrain
-            terrain.terrainData = GenerateTerrain(terrain.terrainData, seed);
+        terrain.terrainData = GenerateTerrain(terrain.terrainData, seed);
 
-            // After generating the terrain, generate the road if RoadGenerator is assigned
-            if (roadGenerator != null)
-            {
-                // Get the path points for the road here (needs implementation)
-                List<Vector3> pathPoints = GetPathPoints(); 
-                roadGenerator.GenerateRoad(terrain, pathPoints, roadWidth, roadElevation);
-            }
-            else
-            {
-                Debug.LogError("RoadGenerator script reference not set.");
-            }
+        if (roadGenerator != null)
+        {
+            Pathfinder pathfinder = new Pathfinder(terrain, roadElevation);
+            List<Vector3> pathPoints = GetPathPoints(pathfinder);
+            roadGenerator.GenerateRoad(terrain, pathPoints, roadWidth, roadElevation);
+        }
+        else
+        {
+            Debug.LogError("RoadGenerator script reference not set.");
         }
     }
 
@@ -100,22 +94,57 @@ float CalculateHeight(int x, int y, int seed)
 }
 
 
-private List<Vector3> GetPathPoints()
+
+private List<Vector3> GetPathPoints(Pathfinder pathfinder)
 {
-    // Calculate the center of the terrain in world space
+    // Calculate the middle point of the terrain in world space
     Vector3 terrainCenter = new Vector3(terrain.transform.position.x + terrain.terrainData.size.x / 2, 
                                         0, 
                                         terrain.transform.position.z + terrain.terrainData.size.z / 2);
 
-    // Calculate the start and end points for the road, keeping it in the middle
-    Vector3 startPoint = new Vector3(terrainCenter.x, 0, terrain.transform.position.z);
-    Vector3 endPoint = new Vector3(terrainCenter.x, 0, terrain.transform.position.z + terrain.terrainData.size.z);
+    // Randomize the corners of the loop around the center
+    List<Vector3> corners = new List<Vector3>
+    {
+        new Vector3(terrainCenter.x - width / 4 + Random.Range(-width / 8, width / 8), 0, terrainCenter.z - height / 4 + Random.Range(-height / 8, height / 8)),
+        new Vector3(terrainCenter.x + width / 4 + Random.Range(-width / 8, width / 8), 0, terrainCenter.z - height / 4 + Random.Range(-height / 8, height / 8)),
+        new Vector3(terrainCenter.x + width / 4 + Random.Range(-width / 8, width / 8), 0, terrainCenter.z + height / 4 + Random.Range(-height / 8, height / 8)),
+        new Vector3(terrainCenter.x - width / 4 + Random.Range(-width / 8, width / 8), 0, terrainCenter.z + height / 4 + Random.Range(-height / 8, height / 8))
+    };
 
-    // Adjust y (height) of startPoint and endPoint based on the terrain height at those points
-    startPoint.y = terrain.SampleHeight(startPoint) + roadElevation;
-    endPoint.y = terrain.SampleHeight(endPoint) + roadElevation;
+    // Close the loop by connecting the last point back to the first
+    corners.Add(corners[0]);
 
-    // Return a list with just two points for a simple straight road
-    return new List<Vector3> { startPoint, endPoint };
+    // This list will hold the final set of path points for the road
+    List<Vector3> pathPoints = new List<Vector3>();
+
+    // Use the Pathfinder to find a path between each pair of points
+    for (int i = 0; i < corners.Count - 1; i++)
+    {
+        Vector3 startPoint = corners[i];
+        Vector3 endPoint = corners[i + 1];
+
+        // Use the pathfinder to find the path between corners
+        List<Vector3> segmentPathPoints = pathfinder.FindPath(startPoint, endPoint);
+
+        // If not the first segment, remove the first point to avoid duplication
+        if (i > 0)
+        {
+            segmentPathPoints.RemoveAt(0);
+        }
+
+        pathPoints.AddRange(segmentPathPoints);
+    }
+
+    // Adjust the height of each path point based on the terrain's height
+    for (int i = 0; i < pathPoints.Count; i++)
+    {
+        Vector3 point = pathPoints[i];
+        point.y = terrain.SampleHeight(point) + roadElevation;
+        pathPoints[i] = point;
+    }
+
+    return pathPoints;
 }
+
+
 }
