@@ -102,7 +102,7 @@ public class Pathfinder
         // Calculate the cost considering the slope
         float slopeAngle = Mathf.Atan2(heightDifference, flatDistance) * Mathf.Rad2Deg;
         // Use an angle threshold to increase costs for steep slopes
-        float slopeCost = slopeAngle > 20.0f ? heightPenalty : 100.0f;
+        float slopeCost = slopeAngle > 20.0f ? heightPenalty : 1.0f;
         return flatDistance * slopeCost;
     }
     private List<Vector3> ReconstructPath(Dictionary<Vector3Int, Vector3Int> cameFrom, Vector3Int current)
