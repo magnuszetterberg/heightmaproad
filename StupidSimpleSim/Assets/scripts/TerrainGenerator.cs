@@ -95,6 +95,7 @@ float CalculateHeight(int x, int y, int seed)
 
 
 
+
 private List<Vector3> GetPathPoints(Pathfinder pathfinder)
 {
     // Calculate the middle point of the terrain in world space
@@ -102,13 +103,14 @@ private List<Vector3> GetPathPoints(Pathfinder pathfinder)
                                         0, 
                                         terrain.transform.position.z + terrain.terrainData.size.z / 2);
 
-    // Randomize the corners of the loop around the center
+    // Simplified randomization of the corners of the loop around the center
+    Vector3 randomOffset = new Vector3(Random.Range(-width / 8, width / 8), 0, Random.Range(-height / 8, height / 8));
     List<Vector3> corners = new List<Vector3>
     {
-        new Vector3(terrainCenter.x - width / 4 + Random.Range(-width / 8, width / 8), 0, terrainCenter.z - height / 4 + Random.Range(-height / 8, height / 8)),
-        new Vector3(terrainCenter.x + width / 4 + Random.Range(-width / 8, width / 8), 0, terrainCenter.z - height / 4 + Random.Range(-height / 8, height / 8)),
-        new Vector3(terrainCenter.x + width / 4 + Random.Range(-width / 8, width / 8), 0, terrainCenter.z + height / 4 + Random.Range(-height / 8, height / 8)),
-        new Vector3(terrainCenter.x - width / 4 + Random.Range(-width / 8, width / 8), 0, terrainCenter.z + height / 4 + Random.Range(-height / 8, height / 8))
+        terrainCenter + new Vector3(-width / 4, 0, -height / 4) + randomOffset,
+        terrainCenter + new Vector3(width / 4, 0, -height / 4) + randomOffset,
+        terrainCenter + new Vector3(width / 4, 0, height / 4) + randomOffset,
+        terrainCenter + new Vector3(-width / 4, 0, height / 4) + randomOffset
     };
 
     // Close the loop by connecting the last point back to the first
@@ -145,6 +147,7 @@ private List<Vector3> GetPathPoints(Pathfinder pathfinder)
 
     return pathPoints;
 }
+
 
 
 }
